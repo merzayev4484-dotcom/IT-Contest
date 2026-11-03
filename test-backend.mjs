@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync,readdirSync} from 'node:fs';
+import worker from './dist/server/index.js';
+const db=new DatabaseSync(':memory:');for(const f of readdirSync('./drizzle').filter(x=>x.endsWith('.sql')))db.exec(readFileSync('./drizzle/'+f,'utf8'));
+const env={DB:{prepare(sql){let params=[];const obj={bind(...p){params=p;return obj},async first(){return db.prepare(sql).get(...params)||null},async all(){return {results:db.prepare(sql).all(...params)}},async run(){const r=db.prepare(sql).run(...params);return {meta:{changes:r.changes,last_row_id:Number(r.lastInsertRowid)}}}};return obj},async batch(stmts){const r=[];for(const s of stmts)r.push(await s.run());return r}}};
+globalThis.fetch=async(url,opts)=>{if(url.endsWith('list.json'))return Response.json([{name:'gcc-13.2.0',language:'C++'},{name:'cpython-3.12.0',language:'Python'}]);const d=JSON.parse(opts.body);if(d.code==='COMPILE_ERROR')return Response.json({status:'1',compiler_error:'syntax error'});const a=d.stdin.trim().split(/\s+/).map(Number).slice(1);let n=0;for(let i=1;i<a.length;i++)if((a[i]-a[i-1])%2===0)n++;return Response.json({status:'0',program_output:d.code==='CORRECT'?String(n):'WRONG'})};
+async function call(path,body,uid='owner'){const headers={'oai-authenticated-user-id':uid,'Content-Type':'application/json','Origin':'https://test.local'};const r=await worker.fetch(new Request('https://test.local/api/'+path,{method:body?'POST':'GET',headers,body:body?JSON.stringify(body):undefined}),env);return [r.status,await r.json()]}
+let [status,data]=await call('bootstrap');assert.equal(status,200);assert.equal(data.user.role,'admin');assert.equal(data.state.solved.length,0);
+await call('state',{profile:{name:'Firdavs',bio:'test bio',avatar:''},saved:[1000],drafts:{1:{language:'cpp',text:'abc'}},solved:[1,2,3]});data=(await call('bootstrap'))[1];assert.equal(data.state.profile.bio,'test bio');assert.deepEqual(data.state.saved,[1000]);assert.deepEqual(data.state.solved,[]);
+assert.equal((await call('bootstrap',null,'student'))[1].user.role,'user');assert.equal((await call('users',null,'student'))[0],403);
+let submission=(await call('submit',{pid:1,code:'CORRECT',language:'cpp'}))[1];let r;for(let i=0;i<6;i++)r=(await call('judge-step',{id:submission.id}))[1];assert.equal(r.status,'Accepted');assert.equal(r.passed,6);assert.equal((await call('bootstrap'))[1].coins,5);await call('judge-step',{id:submission.id});assert.equal((await call('bootstrap'))[1].coins,5);
+assert.equal((await call('judge-step',{id:submission.id},'student'))[0],404);
+db.exec('UPDATE submissions SET created=0');submission=(await call('submit',{pid:1,code:'WRONG',language:'py'}))[1];assert.equal((await call('judge-step',{id:submission.id}))[1].status,'Wrong Answer');
+db.exec('UPDATE submissions SET created=0');submission=(await call('submit',{pid:1,code:'COMPILE_ERROR',language:'cpp'}))[1];assert.equal((await call('judge-step',{id:submission.id}))[1].status,'Compilation Error');
+console.log('PASS: identity, roles, profile persistence, draft persistence, no forged rewards, cross-user isolation, 6 judge steps, Accepted, Wrong Answer, Compilation Error, idempotent coins.');
