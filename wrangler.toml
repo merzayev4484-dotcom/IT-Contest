@@ -1,0 +1,13 @@
+name = "it-contest-api"
+main = "worker/index.js"
+compatibility_date = "2026-11-03"
+[vars]
+SUPABASE_URL = "https://wezsbscdpblpzuhbhlov.supabase.co"
+SUPABASE_PUBLISHABLE_KEY = "sb_publishable_4gaokitJYXin8gerdUqqWA_UNXka0zZ"
+ALLOWED_ORIGIN = "https://merzayev4484-dotcom.github.io"
+ADMIN_USER_ID = "SET_YOUR_SUPABASE_USER_UUID"
+[[d1_databases]]
+binding = "DB"
+database_name = "it-contest"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"

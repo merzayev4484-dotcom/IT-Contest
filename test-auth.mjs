@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {readFileSync} from 'node:fs';
+import worker from './worker/index.js';
+const db=new DatabaseSync(':memory:');db.exec(readFileSync(new URL('./migrations/0001_initial.sql',import.meta.url),'utf8'));
+const env={SUPABASE_URL:'https://auth.example',SUPABASE_PUBLISHABLE_KEY:'public',ADMIN_USER_ID:'owner',ALLOWED_ORIGIN:'https://site.example',DB:{prepare(sql){let args=[];const q={bind(...a){args=a;return q},async first(){return db.prepare(sql).get(...args)||null},async all(){return {results:db.prepare(sql).all(...args)}},async run(){const r=db.prepare(sql).run(...args);return {meta:{last_row_id:Number(r.lastInsertRowid),changes:r.changes}}}};return q},async batch(list){return Promise.all(list.map(q=>q.run()))}}};
+globalThis.fetch=async(url,options)=>{assert.equal(url,'https://auth.example/auth/v1/user');const token=options.headers.Authorization.slice(7);if(!['owner','visitor','unconfirmed'].includes(token))return Response.json({error:'invalid'},{status:401});return Response.json({id:token,email_confirmed_at:token==='unconfirmed'?null:'2026-01-01',user_metadata:{display_name:'Test'}})};
+async function call(path,token,extra={}){return worker.fetch(new Request('https://api.example/api/'+path,{headers:{Origin:'https://site.example',...(token?{Authorization:'Bearer '+token}:{}),...extra}}),env)}
+assert.equal((await call('bootstrap')).status,401);
+assert.equal((await call('bootstrap',null,{'oai-authenticated-user-id':'owner'})).status,401);
+assert.equal((await call('bootstrap','forged')).status,401);
+assert.equal((await call('bootstrap','unconfirmed')).status,401);
+let res=await call('bootstrap','visitor');assert.equal(res.status,200);let data=await res.json();assert.equal(data.user.role,'user');assert.equal(data.user.id,'visitor');assert.deepEqual(data.state.solved,[]);assert.equal(res.headers.get('Access-Control-Allow-Origin'),'https://site.example');
+data=await (await call('bootstrap','owner')).json();assert.equal(data.user.role,'admin');
+assert.equal((await call('users','visitor')).status,403);
+assert.equal((await call('users','owner')).status,200);
+assert.equal((await call('bootstrap','owner',{Origin:'https://evil.example'})).status,403);
+res=await worker.fetch(new Request('https://api.example/api/bootstrap',{method:'OPTIONS',headers:{Origin:'https://site.example'}}),env);assert.equal(res.status,204);assert.match(res.headers.get('Access-Control-Allow-Headers'),/Authorization/);
+const js=readFileSync(new URL('./app.js',import.meta.url),'utf8');assert.ok(!js.includes('signin-with-chatgpt'));for(const method of ['signUp','signInWithPassword','signInWithOAuth','resetPasswordForEmail','updateUser','signOut'])assert.ok(js.includes(method));
+console.log('PASS: verified identity, rejected spoofing, email confirmation, admin isolation, CORS, auth entry points');

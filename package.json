@@ -1,14 +1,14 @@
 {
-  "name": "sites-worker-esm-starter",
+  "name": "it-contest-supabase",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bash scripts/build.sh",
-    "validate": "node scripts/validate-artifact.mjs",
-    "db:generate": "drizzle-kit generate"
+    "deploy:api": "wrangler deploy",
+    "test": "node test-auth.mjs && node test-judge.mjs",
+    "db:create": "wrangler d1 create it-contest",
+    "db:migrate": "wrangler d1 migrations apply it-contest --remote"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.11",
-    "drizzle-orm": "^0.45.4"
+    "wrangler": "^4.0.0"
   }
 }

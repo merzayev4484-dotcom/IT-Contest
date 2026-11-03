@@ -1,64 +1,34 @@
-# IT Contest — GitHub uchun loyiha
+# IT Contest — email-parol va Google bilan kirish
 
-1000 ta original masala (100 algoritmik asos × 10 shart varianti), C++/Python kod yuborish, profil/bio/rasm, admin orqali masala qo‘shish, coin, faollik, reyting va yechimlar tarixi.
+Bu versiya ChatGPT hisobini talab qilmaydi. 1000 original mashq, profil, admin, coin va serverdagi kod tekshirish saqlangan. Email-parol bilan kirish, ro‘yxatdan o‘tish, emailni tasdiqlash, parol tiklash, Google OAuth va chiqish Supabase Auth orqali ishlaydi.
 
-## GitHub’ga yuklash
-1. ZIPni kompyuterda oching (Extract All / Извлечь всё).
-2. GitHub → New repository → repository nomini yozing → Create repository.
-3. Add file → Upload files orqali ZIP ichidagi fayl va papkalarni yuklang. ZIPning o‘zini repositoryga yuklamang.
-4. Commit changes tugmasini bosing. .openai va .gitignore kabi yashirin fayllarni ham qo‘shish kerak. To‘liq manba uchun Git orqali push qilish qulayroq.
+## Hozirgi holat
+Manba tayyor, GitHub yoki Cloudflare akkauntingizga yuklanmagan. Google provider Supabase-da yoqilishi kerak. GitHub Pages server kodini bajarmaydi: frontend GitHub-da, judge API Cloudflare Worker+D1-da ishlaydi. API ulanmaguncha tizim kirishdan keyin bu haqda aniq xabar ko‘rsatadi. Soxta Accepted yoki coin berilmaydi. Avvalgi ChatGPT akkauntidagi natijalar avtomatik ko‘chmaydi.
 
-Git orqali (Git o‘rnatilgan bo‘lishi kerak):
-```bash
-git init
-git add .
-git commit -m "IT Contest initial version"
-git branch -M main
-git remote add origin https://github.com/SIZNING_LOGIN/IT-Contest.git
-git push -u origin main
+## 1. Supabase
+Authentication → URL Configuration: Site URL va Redirect URL:
+https://merzayev4484-dotcom.github.io/IT-Contest/
+Email provider va signups yoqilgan bo‘lsin. Google provider uchun o‘zingiz yaratgan Client ID va yangi secretni dashboardga kiriting. Secretlar bu paketda yo‘q. Google test rejimida faqat test users kira oladi. Email yuborish limitlari Supabase tarifiga bog‘liq.
+
+## 2. Cloudflare API
+Kompyuterda Node.js o‘rnating. Shu papkada terminal oching:
 ```
-SIZNING_LOGIN o‘rniga GitHub loginni, IT-Contest o‘rniga yaratgan repository nomini yozing.
-
-## GitHub Pages’ni yoqish
-Settings → Pages → Deploy from a branch → main → /(root) → Save.
-
-Rootdagi index.html sahifasi tayyor **jonli IT Contest’ga kirish tugmasini** ko‘rsatadi. U butun backendni GitHub Pages’da bajarmaydi. Jonli sayt manzili:
-https://it-contest-firdavs-live.chicberry11.chatgpt.site/
-
-Sayt hozir egasiga yopiq. “Continue with ChatGPT” orqali aynan sayt egasining hisobi bilan kiriladi. GitHub Pages yoqilishi jonli saytning yopiq kirish siyosatini o‘zgartirmaydi. Boshqa odamlar foydalanishi uchun jonli saytga ruxsatlar alohida sozlanishi kerak.
-
-## Muhim farq
-GitHub repository — manba kodini saqlash joyi. GitHub Pages — HTML/CSS/JavaScript fayllarini uzatuvchi statik hosting. C++/Python’ni tekshirish, hisoblar va bazani saqlash backend hamda tashqi kompilyator talab qiladi.
-
-Bu ZIP allaqachon ishlayotgan Sites loyihasining manba nusxasi. Boshqa hostingga ko‘chirish tayyor bir bosishli jarayon emas: autentifikatsiya, D1 bazasi va migrationlarni moslashtirish kerak. Sites kiritadigan oai-authenticated-user-id sarlavhasini ochiq oddiy serverda tekshirmasdan ishonchli deb qabul qilish mumkin emas. Alohida hosting uchun tasdiqlangan autentifikatsiya qo‘shilmaguncha API’ni internetga ochmang.
-
-## Fayllar
-- index.html — GitHub Pages uchun jonli saytga kirish sahifasi.
-- frontend.html, frontend.js — serverga ulangan foydalanuvchi interfeysi.
-- worker/index.js — joylashtiriladigan to‘liq server kodi va o‘rnatilgan 1000 ta masala.
-- backend.js — API, huquqlar, profil, yechim yuborish va judge adapteri.
-- hidden.json — 6000 ta server testi. Repository ommaviy bo‘lsa ular ham ko‘rinadi; testlarni sir saqlash kerak bo‘lsa repositoryni Private qiling.
-- drizzle/ — ma’lumotlar bazasi migrationlari.
-- db/schema.ts — baza sxemasi.
-- build_frontend.py — interfeysni va serverni yig‘ish skripti.
-- authoring/ — 1000 ta original masala generatori, shablonlar va tekshiruvlar.
-- scripts/build.sh — server artefaktini yig‘ish.
-- test-backend.mjs — backend integratsion testlari (kompilyator javobi mock qilinadi).
-- README-server.md — server arxitekturasi va cheklovlari.
-
-## Lokal tekshiruv
-Node.js 24+ va Python 3 kerak:
-```bash
-npm ci
-npm run build
-npm run validate
-node test-backend.mjs
-python3 authoring/verify.py
+npm install
+npx wrangler login
+npm run db:create
 ```
+Chiqqan database_id ni wrangler.toml ga qo‘ying.
+Supabase → Authentication → Users ichidagi o‘z foydalanuvchi UUID qiymatingizni ADMIN_USER_ID ga qo‘ying. Birinchi kirgan odam avtomatik admin qilinmaydi.
+```
+npm run db:migrate
+npm run deploy:api
+```
+Chiqqan https://it-contest-api....workers.dev manzilini config.js dagi apiUrl ga kiriting (oxirida slashsiz). Cloudflare va Wandbox cheklovlari amal qiladi. Maxfiy testlarni saqlash uchun worker manbasini public repozitoriyga yuklamang.
 
-`npm run build` saytni lokal serverda avtomatik ishga tushirmaydi; joylashtiriladigan Worker faylini tayyorlaydi. HTML’ni kompyuterda ochish backendni ishga tushirmaydi.
+## 3. GitHub Pages
+Faqat index.html, app.js, config.js fayllarini IT-Contest repozitoriy ildiziga yuklang. Avvalgi Google tasdiqlash faylini o‘chirmang. Bu eski launcher index.html o‘rnini bosadi. Boshqa eski frontend/worker fayllari Pages uchun kerak emas. Ctrl+F5 bilan yangilang.
 
-Jonli serverdagi C++ va Python dasturlari haqiqatan bajarilishi tekshirilgan. Hisob ichidagi yakuniy foydalanuvchi testi egasining loginini talab qiladi. Wandbox xizmati mavjudligi va limitlari tashqi xizmatga bog‘liq; xatolar natija sifatida aniq ko‘rsatiladi. Keyinchalik maxsus Judge0 xizmatiga ulash uchun JUDGE0_URL va kerak bo‘lsa JUDGE0_TOKEN server secretlari ishlatiladi.
+## Tekshirish
+`npm test` — server identifikatsiyasi, soxta header, admin huquqi, CORS va foydalanuvchilar ajratilishini tekshiradi. Haqiqiy OAuth browserga qaytish va email oqimini o‘z akkauntingiz bilan deploymentdan keyin sinang.
 
-## Sirlarni saqlash
-Parol, API tokeni, .env, .dev.vars yoki haqiqiy foydalanuvchilar bazasini GitHubga yuklamang. Bu ZIPga ular kiritilmagan.
+Google Cloud client secret yoki Supabase secret/service_role kalitini frontendga, GitHubga yoki chatga qo‘ymang. Paket faqat ochiq publishable kalitni o‘z ichiga oladi.
